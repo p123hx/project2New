@@ -126,6 +126,10 @@ public class Main implements Serializable {
             System.out.println(("Not in an initialized gitlet directory."));
             return;
         }
+        if (args.length != 1) {
+            System.out.println("Incorrect operands.");
+            return;
+        }
         GitletEngine.globalLog();
         return;
     }

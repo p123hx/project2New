@@ -193,7 +193,7 @@ public class GitletEngine implements Serializable {
             }
         } else if (!tracked.contains(filename) && toDeleteStage.exists()) {
             toDeleteStage.delete();
-        } else if (!tracked.contains(filename) && !toDeleteStage.exists()){
+        } else if (!tracked.contains(filename) && !toDeleteStage.exists()) {
             System.out.println("No reason to remove the file");
         }
     }
