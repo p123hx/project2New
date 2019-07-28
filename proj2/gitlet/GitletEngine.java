@@ -152,10 +152,12 @@ public class GitletEngine implements Serializable {
         File ped = Utils.join(GITDIR, "untracking");
         List<String> untracked = Arrays.asList(ped.list());
 
+/*
         if (stagedFiless.isEmpty() && untracked.isEmpty()) {
             System.out.println("No changes added to the commit.");
             return;
         }
+ */
         if (message.equals("")) {
             System.out.println("Please enter a commit message.");
             return;
