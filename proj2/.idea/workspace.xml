@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="32f1a80a-4a1f-430f-b8e3-a5827299b4bb" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gitlet/GitletEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/gitlet/GitletEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gitlet/Tree.java" beforeDir="false" afterPath="$PROJECT_DIR$/gitlet/Tree.java" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

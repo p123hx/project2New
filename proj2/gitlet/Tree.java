@@ -110,5 +110,15 @@ public class Tree implements Serializable {
             toSha.add(this.commitTime.toString());
             this.shaId = Utils.sha1(toSha); //does this need all the variables, not just "this"?
         }
+
+        @Override
+        public String toString() {
+            String output = "===" + "\n" + "Commit "
+                    + this.shaId + "\n" + this.commitTime
+                    + "\n" + this.logMessage
+                    + "\n";
+            return output;
+        }
+
     }
 }
