@@ -160,7 +160,6 @@ public class GitletEngine implements Serializable {
                 File currFile = new File(dir, fileName);
                 currFile.delete();
             }
-            return;
         }
     }
 
@@ -471,32 +470,32 @@ public class GitletEngine implements Serializable {
             System.out.println("A branch with that name does not exist.");
             return;
         }
-
         if (currBranch.name.equals(branchName)) {
             System.out.println("Cannot merge a branch with itself.");
             return;
         }
-
         if (!Utils.fileisEmpty(stagedDirctory) || !Utils.fileisEmpty(untrackingDirctory)) {
             System.out.println("You have uncommitted changes.");
             return;
         }
-        
+
         Tree.Node newNode = newBranch.headNode;
-        Tree.Node splitNode = splitP(currBranch, newBranch);//
+        Tree.Node splitNode = splitP(currBranch, newBranch);
         List<String> fileNames = Utils.plainFilenamesIn(currentDirectory);
         for (String filename : fileNames) {
             File file = Utils.join(currentDirectory, filename);
-            if (file.exists() && !isTracked(currNode, filename)) {
-                String currId = currNode.hashed.get(currNode.fileNames.indexOf(filename));
-                String newId = newNode.hashed.get(newNode.fileNames.indexOf(filename));
-                if (newNode.fileNames.contains(filename) && !currId.equals(newId)) {
-                    System.out.println("There is an untracked file in "
-                            +
-                            "the way; delete it or add it first.");
-                    return;
+            if (!isTracked(currNode, filename)) {
+                if (newNode.fileNames.contains(filename)) {
+                    String currId = currNode.hashed.get(currNode.fileNames.indexOf(filename));
+                    String workingID = Utils.sha1(Utils.readContents(file), file.getName());
+                    if (!currId.equals(workingID)) {
+                        System.out.println("There is an untracked file in "
+                                +
+                                "the way; delete it or add it first.");
+                        return;
+                    }
                 }
-                if (!newNode.fileNames.contains(filename) && currId.equals(newId)) {
+                if (!newNode.fileNames.contains(filename) && splitNode.fileNames.contains(filename)) {
                     System.out.println("There is an untracked file in "
                             +
                             "the way; delete it or add it first.");
@@ -611,12 +610,7 @@ public class GitletEngine implements Serializable {
         for (String name : newNode.fileNames) {
             if (!split.fileNames.contains(name)) {
                 if (!currNode.fileNames.contains(name)) {
-                    File file = Utils.join(currentDirectory, name);
-                    int index = newNode.fileNames.indexOf(name);
-                    String fileId = newNode.hashed.get(index);
-                    File thisFile = Utils.join(committedDirctory, fileId);
-                    byte[] contents = Utils.readContents(thisFile);
-                    Utils.writeContents(file, contents);
+                    writeCommitted2Working(name, newNode);
                     add(name);
                 }
             }
