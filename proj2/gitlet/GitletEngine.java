@@ -13,18 +13,17 @@ import java.util.Collections;
 
 public class GitletEngine implements Serializable {
     private static boolean isConflicted = false;
-    public static File currentDirectory = new File(System.getProperty("user.dir"));
-    public static final File GITDIR = Utils.join(currentDirectory, "gitlet");
-    public static File committedDirctory = Utils.join(GITDIR, "committed");
-    public static File stagedDirctory = Utils.join(GITDIR, "staged");
-    public static File untrackingDirctory = Utils.join(GITDIR, "untracking");
+    public static final File GITDIR = new File(".gitlet/");
+    public static File committedDirctory = new File(GITDIR, "committed");
+    public static File stagedDirctory = new File(GITDIR, "staged");
+    public static File untrackingDirctory = new File(GITDIR, "untracking");
 
     public static boolean checkInit() {
         return GITDIR.exists() && GITDIR.isDirectory();
     }
 
     public static void writeObjectToFile(Object myMetadata) {
-        File outfile = Utils.join(GITDIR, "metadata");
+        File outfile = new File(GITDIR, "metadata");
         try {
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(outfile));
             out.writeObject(myMetadata);
@@ -36,7 +35,7 @@ public class GitletEngine implements Serializable {
 
     public static Tree loadTree() {
         Tree myMetadata = new Tree();
-        File inFile = Utils.join(GITDIR, "metadata");
+        File inFile = new File(GITDIR, "metadata");
         try {
             ObjectInputStream inp = new ObjectInputStream(new FileInputStream(inFile));
             myMetadata = (Tree) inp.readObject();
@@ -62,15 +61,11 @@ public class GitletEngine implements Serializable {
         Utils.writeContents(dest, Utils.readContents(src));
     }
 
-    public static String filename2ID(Tree.Node node, String name) {
-        return node.hashed.get(node.fileNames.indexOf(name));
-    }
-
     public static void writeCommitted2Working(String filename, Tree.Node node) {
         int index = node.fileNames.indexOf(filename);
         String hashId = node.hashed.get(index);
-        File src = Utils.join(committedDirctory, hashId);
-        File dest = Utils.join(currentDirectory, filename);
+        File src = new File(committedDirctory, hashId);
+        File dest = new File(filename);
         Utils.writeContents(dest, Utils.readContents(src));
     }
 
@@ -80,7 +75,7 @@ public class GitletEngine implements Serializable {
         stagedDirctory.mkdir();
         untrackingDirctory.mkdir();
         Tree metadata = new Tree();
-        File mett = Utils.join(GITDIR, "metadata");
+        File mett = new File(GITDIR, "metadata");
         try {
             mett.createNewFile();
         } catch (IOException e) {
@@ -93,14 +88,14 @@ public class GitletEngine implements Serializable {
         //fixme
         Tree metadata = loadTree();
         Tree.Node currNode = metadata.currBranch.headNode;
-        File fileWorking = Utils.join(currentDirectory, file);
+        File fileWorking = new File(file);
         if (!fileWorking.exists()) {
             System.out.println("File does not exist.");
             return;
         }
         String fileID = Utils.sha1(Utils.readContents(fileWorking), fileWorking.getName());
-        File fileStaged = Utils.join(stagedDirctory, file);
-        File fileUntracking = Utils.join(untrackingDirctory, file);
+        File fileStaged = new File(stagedDirctory, file);
+        File fileUntracking = new File(untrackingDirctory, file);
         if (!(currNode.hashed.contains(fileID)) || fileUntracking.exists()) {
             if (fileUntracking.exists()) {
                 fileUntracking.delete();
@@ -137,9 +132,9 @@ public class GitletEngine implements Serializable {
             }
             for (String string : stagedFiles) {
                 realNames.add(string);
-                File fileStaged = Utils.join(stagedDirctory, string);
+                File fileStaged = new File(stagedDirctory, string);
                 String fileID = Utils.sha1(Utils.readContents(fileStaged), fileStaged.getName());
-                File fileCommitted = Utils.join(committedDirctory, fileID);
+                File fileCommitted = new File(committedDirctory, fileID);
                 creatFile(fileCommitted);
                 writeFIle2File(fileStaged, fileCommitted);
                 hashedNames.add(fileID);
@@ -153,7 +148,7 @@ public class GitletEngine implements Serializable {
     public static void deleteDr(File dir) {
         if (dir.exists()) {
             for (String fileName: Utils.plainFilenamesIn(dir)) {
-                File currFile = Utils.join(dir, fileName);
+                File currFile = new File(dir, fileName);
                 currFile.delete();
             }
         }
@@ -170,9 +165,9 @@ public class GitletEngine implements Serializable {
         ArrayList tracked = currNode.fileNames;
         //fixme
 
-        File toDelete = Utils.join(currentDirectory, filename);
-        File toDeleteStage = Utils.join(stagedDirctory, filename);
-        File fileUntracked = Utils.join(untrackingDirctory, filename);
+        File toDelete = new File(filename);
+        File toDeleteStage = new File(stagedDirctory, filename);
+        File fileUntracked = new File(untrackingDirctory, filename);
         if (!isTracked(currNode, filename) && !toDeleteStage.exists()) {
             System.out.println("No reason to remove the file");
             return;
@@ -316,7 +311,7 @@ public class GitletEngine implements Serializable {
             return;
         }
         for (String name : newNode.fileNames) {
-            File file = Utils.join(currentDirectory, name);
+            File file = new File(name);
             if (file.exists() && !isTracked(currNode, name)) {
                 System.out.println("There is an untracked file in the way; "
                         +
@@ -338,13 +333,13 @@ public class GitletEngine implements Serializable {
     }
 
     public static boolean isTracked(Tree.Node curr, String file) {
-        File untracking = Utils.join(untrackingDirctory, file);
+        File untracking = new File(untrackingDirctory, file);
         return (curr.fileNames.contains(file) && !untracking.exists());
     }
 
     public static boolean untrackCheck(Tree.Node newNode, Tree.Node currNode) {
         for (String filename : newNode.fileNames) {
-            File file = Utils.join(currentDirectory, filename);
+            File file = new File(filename);
             if (file.exists() && !isTracked(currNode, filename)) {
                 System.out.println("There "
                         + "is an untracked file in the way; delete it or add it first.");
@@ -476,9 +471,12 @@ public class GitletEngine implements Serializable {
 
         Tree.Node newNode = newBranch.headNode;
         Tree.Node splitNode = splitP(currBranch, newBranch);
-        List<String> fileNames = Utils.plainFilenamesIn(currentDirectory);
-        for (String filename : fileNames) {
-            File file = Utils.join(currentDirectory, filename);
+        File parentFolder = new File(".").getAbsoluteFile();
+        for (File file : parentFolder.listFiles()) {
+            String filename = file.getName();
+            if (!file.isFile()) {
+                continue;
+            }
             if (!isTracked(currNode, filename)) {
                 if (newNode.fileNames.contains(filename)) {
                     String currId = currNode.hashed.get(currNode.fileNames.indexOf(filename));
@@ -525,14 +523,14 @@ public class GitletEngine implements Serializable {
             isConflicted = true;
             System.out.println("Encountered a merge conflict.");
         }
-        File file = Utils.join(currentDirectory, filename);
+        File file = new File(filename);
         String ret = "<<<<<<< HEAD\n";
         if (!file.exists()) {
             Utils.writeContents(file, new byte[]{});
         }
         int index = currNode.fileNames.indexOf(filename);
         String fileId = currNode.hashed.get(index);
-        File thisFile = Utils.join(GITDIR, "committed", fileId);
+        File thisFile = new File(committedDirctory, fileId);
         byte[] contents = Utils.readContents(thisFile);
         if (currNode.fileNames.contains(filename)) {
             ret = ret + new String(contents);
@@ -541,7 +539,7 @@ public class GitletEngine implements Serializable {
         Tree.Node bNode = b.headNode;
         int bIndex = bNode.fileNames.indexOf(filename);
         String bFileId = bNode.hashed.get(bIndex);
-        File bFile = Utils.join(GITDIR, "committed", bFileId);
+        File bFile = new File(committedDirctory, bFileId);
         byte[] bContents = Utils.readContents(bFile);
         if (bNode.fileNames.contains(filename)) {
             ret = ret + new String(bContents);
