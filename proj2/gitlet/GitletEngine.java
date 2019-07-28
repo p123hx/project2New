@@ -1,4 +1,6 @@
 package gitlet;
+import jdk.jshell.execution.Util;
+
 import java.io.Serializable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,9 +15,9 @@ import java.util.Collections;
 public class GitletEngine implements Serializable {
     private static boolean isConflicted = false;
     public static File currentDirectory = new File(System.getProperty("user.dir"));
-    public static final File GITDIR = new File(currentDirectory, ".gitlet");
-    public static File committedDirctory = new File(GITDIR, "committed");
-    public static File stagedDirctory = new File(GITDIR, "staged");
+    public static final File GITDIR = Utils.join(currentDirectory, ".gitlet");
+    public static File committedDirctory = Utils.join(GITDIR, "committed");
+    public static File stagedDirctory = Utils.join(GITDIR, "staged");
     public static File untrackingDirctory = Utils.join(GITDIR, "untracking");
 
     public static boolean checkInit() {
@@ -23,7 +25,7 @@ public class GitletEngine implements Serializable {
     }
 
     public static void writeObjectToFile(Object myMetadata) {
-        File outfile = new File(GITDIR, "metadata");
+        File outfile = Utils.join(GITDIR, "metadata");
         try {
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(outfile));
             out.writeObject(myMetadata);
@@ -35,7 +37,7 @@ public class GitletEngine implements Serializable {
 
     public static Tree loadTree() {
         Tree myMetadata = new Tree();
-        File inFile = new File(GITDIR, "metadata");
+        File inFile = Utils.join(GITDIR, "metadata");
         try {
             ObjectInputStream inp = new ObjectInputStream(new FileInputStream(inFile));
             myMetadata = (Tree) inp.readObject();
@@ -84,7 +86,7 @@ public class GitletEngine implements Serializable {
         stagedDirctory.mkdir();
         untrackingDirctory.mkdir();
         Tree metadata = new Tree();
-        File mett = new File(GITDIR, "metadata");
+        File mett = Utils.join(GITDIR, "metadata");
         try {
             mett.createNewFile();
         } catch (IOException e) {
@@ -157,7 +159,7 @@ public class GitletEngine implements Serializable {
     public static void deleteDr(File dir) {
         if (dir.exists()) {
             for (String fileName: Utils.plainFilenamesIn(dir)) {
-                File currFile = new File(dir, fileName);
+                File currFile = Utils.join(dir, fileName);
                 currFile.delete();
             }
         }
