@@ -1,5 +1,6 @@
 package gitlet;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,7 +10,6 @@ import java.util.Arrays;
    @author Hongxi
 */
 public class Main implements Serializable {
-
     /* Usage: java gitlet.Main ARGS, where ARGS contains
        <COMMAND> <OPERAND> .... */
     public static void main(String... args) {

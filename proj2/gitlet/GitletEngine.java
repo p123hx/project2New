@@ -102,7 +102,7 @@ public class GitletEngine implements Serializable {
         Tree metadata = loadTree();
         Tree.Node currNode = metadata.currBranch.headNode;
         File fileWorking = new File(file);
-        String fileID = Utils.sha1(Utils.readContents(fileWorking));
+        String fileID = Utils.sha1(Utils.readContents(fileWorking), fileWorking.getName());
         File fileStaged = Utils.join(stagedDirctory, file);
         File fileUntracking = Utils.join(untrackingDirctory, file);
         if (!(currNode.hashed.contains(fileID))) {
@@ -141,7 +141,7 @@ public class GitletEngine implements Serializable {
             for (String string : stagedFiles) {
                 realNames.add(string);
                 File fileStaged = Utils.join(stagedDirctory, string);
-                String fileID = Utils.sha1(Utils.readContents(fileStaged));
+                String fileID = Utils.sha1(Utils.readContents(fileStaged), fileStaged.getName());
                 hashedNames.add(fileID);
             }
             metadata.add(message, hashedNames, realNames);
