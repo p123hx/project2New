@@ -1,5 +1,4 @@
 package gitlet;
-import jdk.jshell.execution.Util;
 
 import java.io.Serializable;
 import java.io.File;
@@ -15,7 +14,7 @@ import java.util.Collections;
 public class GitletEngine implements Serializable {
     private static boolean isConflicted = false;
     public static File currentDirectory = new File(System.getProperty("user.dir"));
-    public static final File GITDIR = Utils.join(currentDirectory, ".gitlet");
+    public static final File GITDIR = Utils.join(currentDirectory, "gitlet");
     public static File committedDirctory = Utils.join(GITDIR, "committed");
     public static File stagedDirctory = Utils.join(GITDIR, "staged");
     public static File untrackingDirctory = Utils.join(GITDIR, "untracking");
@@ -61,11 +60,6 @@ public class GitletEngine implements Serializable {
 
     public static void writeFIle2File(File src, File dest) {
         Utils.writeContents(dest, Utils.readContents(src));
-    }
-
-    public static File filename2CommittedFile(Tree.Node node, String name) {
-        String id = filename2ID(node, name);
-        return Utils.join(committedDirctory, id);
     }
 
     public static String filename2ID(Tree.Node node, String name) {
@@ -172,7 +166,6 @@ public class GitletEngine implements Serializable {
 
     public static void rm(String filename) {
         Tree metadata = loadTree();
-        List<String> staging = Utils.plainFilenamesIn(stagedDirctory);
         Tree.Node currNode = metadata.currBranch.headNode;
         ArrayList tracked = currNode.fileNames;
         //fixme
