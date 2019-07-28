@@ -495,7 +495,8 @@ public class GitletEngine implements Serializable {
                         return;
                     }
                 }
-                if (!newNode.fileNames.contains(filename) && splitNode.fileNames.contains(filename)) {
+                if (!newNode.fileNames.contains(filename)
+                        && splitNode.fileNames.contains(filename)) {
                     System.out.println("There is an untracked file in "
                             +
                             "the way; delete it or add it first.");
