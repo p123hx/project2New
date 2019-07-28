@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 
 public class Tree implements Serializable {
     public ArrayList<Branch> branches; //does branches need a size?
+    public ArrayList<Node> allNodes;
     public Head head;
 
     public class Branch implements Serializable {
@@ -32,7 +33,8 @@ public class Tree implements Serializable {
         this.head = heed;
         this.branches = new ArrayList<Branch>();
         this.branches.add(master);
-
+        this.allNodes = new ArrayList<>();
+        this.allNodes.add(firstCommit);
     }
     public void add(String message, ArrayList<String> hashedNames,
                     ArrayList<String> realNames, List untracked) {
@@ -54,6 +56,7 @@ public class Tree implements Serializable {
                 this.head.branch.node.hashed.add(old.hashed.get(index));
             }
         }
+        allNodes.add(adding);
     }
 
     public void makeBranch(String branchName) {

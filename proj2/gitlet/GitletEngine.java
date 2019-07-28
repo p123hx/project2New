@@ -18,6 +18,9 @@ public class GitletEngine implements Serializable {
     public static String committedDirctory = "committed";
     public static File currentDirectory = new File(System.getProperty("user.dir"));
     public static final File GITDIR = new File(currentDirectory, ".gitlet");
+    public static File trackedDirctory = new File(GITDIR, "committed");
+    public static File stagedDirctory = new File(GITDIR, "staged");
+    public static File untrackingDirctory = new File(GITDIR, "untracking");
     public static boolean checkInit() {
         return GITDIR.exists() && GITDIR.isDirectory();
     }
@@ -47,6 +50,27 @@ public class GitletEngine implements Serializable {
         return myMetadata;
     }
 
+    public static void creatFile(File file) {
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void writeFIle2File(File src, File dest) {
+        Utils.writeContents(dest, Utils.readContents(src));
+    }
+
+    public static void writeCommitted2Working(String filename, Tree.Node node) {
+        int index = node.fileNames.indexOf(filename);
+        String hashId = node.hashed.get(index);
+        File src = new File(committedDirctory, hashId);
+        File dest = new File(filename);
+        Utils.writeContents(dest, Utils.readContents(src));
+    }
 
     public static void init() {
         //File pwd = new File(System.getProperty("user.dir"));
@@ -193,61 +217,33 @@ public class GitletEngine implements Serializable {
                 File currFile = new File(dir, fileName);
                 currFile.delete();
             }
-            return;
-        } else {
-            return;
         }
     }
 
     public static void clearStageUntracking() {
-        File staged = Utils.join(GITDIR, "staged");
-        File ped = Utils.join(GITDIR, "untracking");
-        deleteDr(ped);
-        deleteDr(staged);
-    }
-    public static void rmHelper(String filename) {
-        File absNew = Utils.join(GITDIR, "untracking", filename);
-        try {
-            if (!absNew.exists()) {
-                absNew.createNewFile();
-            }
-            //Files.copy(absOld.toPath(), absNew.toPath());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        //file.delete();
-        /*Path sd = Paths.get("user.dir/.gitlet/" + filename);
-        Path od = Paths.get("user.dir/.gitlet/untracking/" + filename);
-        }*/
+        deleteDr(untrackingDirctory);
+        deleteDr(stagedDirctory);
     }
 
     public static void rm(String filename) {
         Tree metadata = loadTree();
-        File staged = Utils.join(GITDIR, "staged");
-        List<String> staging = Utils.plainFilenamesIn(staged);
-        ArrayList tracked = metadata.head.branch.node.fileNames;
-        //if (staging == null && tracked.contains(filename) == false)
-        // System.out.println("No reason to remove the file");
+        Tree.Node currNode = metadata.head.branch.node;
+        ArrayList tracked = currNode.fileNames;
+        //fixme
+
         File toDelete = new File(filename);
-        //File toDelete = new File(System.getProperty("user.dir"), filename);
-        //File toDelete = Utils.join(gitdir, filename);
-        /*if (!toDelete.exists()) {
+        File toDeleteStage = new File(stagedDirctory, filename);
+        File fileUntracked = new File(untrackingDirctory, filename);
+        if (!isTracked(currNode, filename) && !toDeleteStage.exists()) {
             System.out.println("No reason to remove the file");
             return;
-        }*/
-        File toDeleteStage = Utils.join(GITDIR, "staged", filename);
+        }
         if (tracked.contains(filename)) {
-            rmHelper(filename);
-            if (toDelete.exists()) {
-                toDelete.delete();
-            }
-            if (staging != null || toDeleteStage.exists()) {
-                toDeleteStage.delete();
-            }
-        } else if (!tracked.contains(filename) && toDeleteStage.exists()) {
+            creatFile(fileUntracked);
+            Utils.restrictedDelete(filename);
+        }
+        if (toDeleteStage.exists()) {
             toDeleteStage.delete();
-        } else {
-            System.out.println("No reason to remove the file");
         }
     }
 
@@ -536,7 +532,7 @@ public class GitletEngine implements Serializable {
     }
 
     public static boolean isTracked(Tree.Node curr, String file) {
-        File untracking = Utils.join(GITDIR + "untracking" + file);
+        File untracking = new File(untrackingDirctory, file);
         return (curr.fileNames.contains(file) && !untracking.exists());
     }
 
