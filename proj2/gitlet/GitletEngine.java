@@ -510,137 +510,41 @@ public class GitletEngine implements Serializable {
 
     public static void checkoutFile(String fileName) {
         Tree.Node curr = loadTree().head.branch.node;
-        int index = curr.fileNames.indexOf(fileName);
-        String fileID = curr.hashed.get(index);
-        File file = Utils.join(GITDIR, committedDirctory, fileID);
-        if (!file.exists()) {
+        if (!curr.fileNames.contains(fileName)) {
             System.out.println("File does not exist in that commit.");
             return;
         }
-        Utils.writeContents(new File(fileName), Utils.readContents(file));
-    }
-
-    public static boolean checkoutFileHelper(Tree metadata,
-                                             Tree.Node commit,
-                                             List<Tree.Node> used,
-                                             String commitId, String fileName) {
-        boolean flag = false;
-
-        if (commit.parents == null || commit.parents.isEmpty()) {
-            if (commit.shaId.equals(commitId)) {
-                checkFileExist(commit, fileName);
-                return true;
-            }
-            return false;
-        }
-        for (Tree.Node parent : commit.parents) {
-            if (!used.contains(parent)) {
-                if (parent.shaId.equals(commitId)) {
-                    checkFileExist(parent, fileName);
-                    return true;
-                }
-                used.add(parent);
-                flag = checkoutFileHelper(metadata, parent, used, commitId, fileName);
-                if (flag) {
-                    break;
-                }
-            }
-        }
-        return flag;
-    }
-
-    public static boolean checkoutFileHelperShort(Tree metadata,
-                                                  Tree.Node commit,
-                                                  List<Tree.Node> used,
-                                                  String commitId, String fileName) {
-        boolean flag = false;
-
-        if (commit.parents == null || commit.parents.isEmpty()) {
-            if (commit.shaId.startsWith(commitId)) {
-                checkFileExist(commit, fileName);
-                return true;
-            }
-            return false;
-        }
-        for (Tree.Node parent : commit.parents) {
-            if (!used.contains(parent)) {
-                if (parent.shaId.startsWith(commitId)) {
-                    checkFileExist(parent, fileName);
-                    return true;
-                }
-                used.add(parent);
-                flag = checkoutFileHelper(metadata, parent, used, commitId, fileName);
-                if (flag) {
-                    break;
-                }
-            }
-        }
-        return flag;
-    }
-
-
-    public static void checkFileExist(Tree.Node node, String filename) {
-        int len = node.fileNames.size();
-        for (int i = 0; i < len; i += 1) {
-            if (node.fileNames.get(i).equals(filename)) {
-                String id = node.hashed.get(i);
-                File src = Utils.join(GITDIR, committedDirctory, id);
-                Utils.writeContents(new File(node.fileNames.get(i)),
-                        Utils.readContents(src));
-                return;
-            }
-        }
-        System.out.println("File does not exist in that commit.");
-        return;
+        writeCommitted2Working(fileName, curr);
     }
 
     public static void checkoutCommitFile(String commitId, String fileName) {
+        Tree.Node newNode = null;
+        Tree metadata = loadTree();
+        ArrayList<Tree.Node> allNodes = metadata.allNodes;
         if (commitId.length() == 8) {
-            checkoutCommitFileShortID(commitId, fileName);
-            return;
-        }
-        checkoutCommitFileFullID(commitId, fileName);
-        return;
-    }
-
-    public static void checkoutCommitFileFullID(String commitId, String fileName) {
-        Tree metadata = loadTree();
-        ArrayList<Tree.Node> used = new ArrayList<Tree.Node>();
-        Tree.Node p = metadata.head.branch.node;
-        while (p.child != null) {
-            if (p.shaId.equals(commitId)) {
-                checkFileExist(p, fileName);
-                return;
+            for (Tree.Node node : allNodes) {
+                if (node.shaId.startsWith(commitId)) {
+                    newNode = node;
+                    break;
+                }
             }
-            used.add(p);
-            p = p.child;
-        }
-        checkFileExist(p, fileName);
-        if (!checkoutFileHelper(metadata, p, used, commitId, fileName)) {
-            System.out.println("No commit with that id exists. ");
-            return;
-        }
-    }
-
-    public static void checkoutCommitFileShortID(String commitId, String fileName) {
-        Tree metadata = loadTree();
-        ArrayList<Tree.Node> used = new ArrayList<Tree.Node>();
-        Tree.Node p = metadata.head.branch.node;
-
-        while (p.child != null) {
-            if (p.shaId.startsWith(commitId)) {
-                checkFileExist(p, fileName);
-                checkFileExist(p, fileName);
-                return;
+        } else {
+            for (Tree.Node node : allNodes) {
+                if (node.shaId.equals(commitId)) {
+                    newNode = node;
+                    break;
+                }
             }
-            used.add(p);
-            p = p.child;
         }
-        checkFileExist(p, fileName);
-        if (!checkoutFileHelperShort(metadata, p, used, commitId, fileName)) {
-            System.out.println("No commit with that id exists. ");
+        if (newNode == null) {
+            System.out.println("No commit with that id exists.");
             return;
         }
+        if (!newNode.fileNames.contains(fileName)) {
+            System.out.println("File does not exist in that commit.");
+            return;
+        }
+        writeCommitted2Working(fileName, newNode);
     }
 
     public static Tree.Node splitP(Tree.Branch b1, Tree.Branch b2) {
