@@ -70,10 +70,15 @@ public class GitletEngine implements Serializable {
     }
 
     public static void init() {
-        GITDIR.mkdir();
-        committedDirctory.mkdir();
-        stagedDirctory.mkdir();
-        untrackingDirctory.mkdir();
+        File gitD = new File(".gitlet");
+        File committedD = new File(GITDIR, "committed");
+        File stagedD = new File(GITDIR, "staged");
+        File untrackingD = new File(GITDIR, "untracking");
+
+        gitD.mkdir();
+        stagedD.mkdir();
+        committedD.mkdir();
+        untrackingD.mkdir();
         Tree metadata = new Tree();
         File mett = new File(GITDIR, "metadata");
         try {
