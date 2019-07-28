@@ -151,13 +151,7 @@ public class GitletEngine implements Serializable {
         List<String> stagedFiless = Utils.plainFilenamesIn(staged);
         File ped = Utils.join(GITDIR, "untracking");
         List<String> untracked = Arrays.asList(ped.list());
-
-/*
-        if (stagedFiless.isEmpty() && untracked.isEmpty()) {
-            System.out.println("No changes added to the commit.");
-            return;
-        }
- */
+        
         if (message.equals("")) {
             System.out.println("Please enter a commit message.");
             return;
@@ -476,8 +470,7 @@ public class GitletEngine implements Serializable {
             }
         }
         if (!flag) {
-            System.out.println("No such branch exists.");
-            return;
+            flag = false;
         } else if (metadata.head.branch.equals(branchName)) {
             System.out.println("No need to checkout the current branch.");
             return;
