@@ -403,51 +403,87 @@ public class GitletEngine implements Serializable {
         }
     }
 
-    public static void reset(String commitId) {
-        Tree.Node newNode = null;
-        Tree metadata = loadTree();
-        ArrayList<Tree.Node> allNodes = metadata.allNodes;
-        Tree.Node currNode = metadata.head.branch.node;
-        if (commitId.length() == 6) {
-            for (Tree.Node node : allNodes) {
-                //fixme
-                if (node.shaId.startsWith(commitId)) {
-                    newNode = node;
-                    break;
-                }
+    public static Tree.Node resetHelper(Tree.Node commit, ArrayList used, String commitId) {
+        Tree.Node toReturn = commit;
+        if (commit.parents.isEmpty()) {
+/*
+            if (!used.contains(commit) && commit.shaId.equals(commitId)) {
+                return commit;
             }
-        } else {
-            for (Tree.Node node : allNodes) {
-                if (node.shaId.equals(commitId)) {
-                    newNode = node;
-                    break;
+ */
+            return null;
+        }
+        for (Tree.Node parent : commit.parents) {
+            if (!used.contains(parent)) {
+                if (parent.shaId.equals(commitId)) {
+                    return parent;
+                }
+                used.add(parent);
+                Tree.Node dum = resetHelper(parent, used, commitId);
+                if (dum != null) {
+                    return dum;
                 }
             }
         }
+        return null;
+    }
 
-        if (newNode == null) {
-            System.out.println("No commit with that id exists.");
-            return;
+    public static byte[] byteContent(Tree.Node node, String filename) {
+        int index = node.fileNames.indexOf(filename);
+        String id = node.hashed.get(index);
+        File target = Utils.join(GITDIR, "committed", id);
+        return Utils.readContents(target);
+    }
+
+    public static boolean committed(Tree.Node currNode, String filename) {
+        return currNode.fileNames.contains(filename);
+    }
+
+    public static void reset(String commitId) {
+        Tree metadata = loadTree();
+        boolean idTrue = false;
+        ArrayList used = new ArrayList();
+        Tree.Node p = metadata.head.branch.node;
+        Tree.Node curr = metadata.head.branch.node;
+        while (p.child != null) {
+            if (p.shaId.equals(commitId)) {
+                idTrue = true;
+                break;
+            }
+            used.add(p);
+            p = p.child;
         }
-        for (String name : newNode.fileNames) {
-            File file = new File(name);
-            if (file.exists() && !isTracked(currNode, name)) {
-                System.out.println("There is an untracked file in the way; "
-                        +
-                        "delete it or add it first.");
+        if (!idTrue) {
+            p = resetHelper(p, used, commitId);
+            if (p == null) {
+                System.out.println("No commit with that id exists.");
                 return;
+            } else {
+                for (String filename : p.fileNames) {
+                    File f = new File(filename);
+                    if (f.exists() && !committed(curr, filename)) {
+                        System.out.println("There is an untracked file in the way; "
+                                +
+                                "delete it or add it first.");
+                        return;
+                    }
+                }
             }
-        }
-        for (String fileName : currNode.fileNames) {
-            if (!newNode.fileNames.contains(fileName)) {
-                Utils.restrictedDelete(fileName);
+            for (String n : curr.fileNames) {
+                if (!p.fileNames.contains(n)) {
+                    Utils.restrictedDelete(n);
+                }
             }
+            for (String n : p.fileNames) {
+                Utils.writeContents(new File(n), byteContent(p, n));
+            }
+
         }
-        for (String fileName : newNode.fileNames) {
-            writeCommitted2Working(fileName, newNode);
-        }
-        metadata.head.branch.node = newNode;
-        clearStageUntracking();
+        metadata.head.branch.node = p;
+        File staged = Utils.join(GITDIR, "staged");
+        File ped = Utils.join(GITDIR, "untracking");
+        deleteDr(ped);
+        deleteDr(staged);
         writeObjectToFile(metadata);
     }
 
@@ -568,59 +604,72 @@ public class GitletEngine implements Serializable {
 
     public static void merge(String branchName) {
         isConflicted = false;
-        File staged = Utils.join(GITDIR, "staged");
-        File untracked = Utils.join(GITDIR, "untracking");
-        if (!Utils.fileisEmpty(staged) || !Utils.fileisEmpty(untracked)) {
-            System.out.println("You have uncommitted changes.");
-            return;
-        }
         Tree metadata = loadTree();
         Tree.Branch newBranch = null;
         Tree.Branch currBranch = metadata.head.branch;
+        Tree.Node currNode = currBranch.node;
 
-        //if (untrackCheck(metadata)) {
-        //            return;
-        //        }
-        boolean flag = false;
-        Tree.Node node = metadata.head.branch.node;
         for (Tree.Branch branch : metadata.branches) {
             if (branch.name.equals(branchName)) {
-                flag = true;
                 newBranch = branch;
+                break;
             }
         }
-        if (!flag) {
-            System.out.println("No such branch exists.");
+        if (newBranch == null) {
+            System.out.println("A branch with that name does not exist.");
             return;
         }
-        if (metadata.head.branch.equals(branchName)) {
+        if (currBranch.name.equals(branchName)) {
             System.out.println("Cannot merge a branch with itself.");
             return;
         }
-        //fixme
-        /*
-        if (untrackCheck(metadata)) {
+        if (!Utils.fileisEmpty(stagedDirctory) || !Utils.fileisEmpty(untrackingDirctory)) {
+            System.out.println("You have uncommitted changes.");
             return;
         }
-         */
+
         Tree.Node newNode = newBranch.node;
-        Tree.Node currNode = currBranch.node;
-        Tree.Node split = splitP(newBranch, currBranch);
-        if (split.shaId.equals(newNode.shaId)) {
+        Tree.Node splitNode = splitP(currBranch, newBranch);
+        File parentFolder = new File(".").getAbsoluteFile();
+        for (File file : parentFolder.listFiles()) {
+            String filename = file.getName();
+            if (!file.isFile()) {
+                continue;
+            }
+            if (!isTracked(currNode, filename)) {
+                if (newNode.fileNames.contains(filename)) {
+                    String currId = currNode.hashed.get(currNode.fileNames.indexOf(filename));
+                    String workingID = Utils.sha1(Utils.readContents(file), file.getName());
+                    if (!currId.equals(workingID)) {
+                        System.out.println("There is an untracked file in "
+                                +
+                                "the way; delete it or add it first.");
+                        return;
+                    }
+                }
+                if (!newNode.fileNames.contains(filename)
+                        && splitNode.fileNames.contains(filename)) {
+                    System.out.println("There is an untracked file in "
+                            +
+                            "the way; delete it or add it first.");
+                    return;
+                }
+            }
+        }
+        if (splitNode.shaId.equals(newNode.shaId)) {
             System.out.println("Given branch is an ancestor of the current branch.");
             return;
         }
-        if (split.shaId.equals(currNode.shaId)) {
-            String currentCommit = newNode.shaId;
-            currBranch.node = split;
-            metadata.head.branch = currBranch;
-            reset(currentCommit);
+        if (splitNode.shaId.equals(currNode.shaId)) {
+            String newCommitID = newNode.shaId;
+            metadata.head.branch.node = newNode;
+            reset(newCommitID);
             System.out.println("Current branch fast-forwarded..");
             return;
         }
-        split2curr(split, currNode, newNode, newBranch);
-        curr2split(split, currNode, newNode, newBranch);
-        new2split(split, currNode, newNode, newBranch);
+        split2curr(splitNode, currNode, newNode, newBranch);
+        curr2split(splitNode, currNode, newNode, newBranch);
+        new2split(splitNode, currNode, newNode, newBranch);
         if (!isConflicted) {
             commit("Merged " + currBranch.name + " with " + branchName
                     + ".");
@@ -628,32 +677,9 @@ public class GitletEngine implements Serializable {
         writeObjectToFile(metadata);
     }
 
-    public static void writefile(String filename, Tree.Node node) {
-        int index = node.fileNames.indexOf(filename);
-        String hashId = node.hashed.get(index);
-        File src = Utils.join(GITDIR, "committed", hashId);
-        File dest = new File(filename);
-        dest.delete();
-        InputStream is = null;
-        OutputStream os = null;
-        try {
-            is = new FileInputStream(src);
-            os = new FileOutputStream(dest);
-            // buffer size 1K
-            byte[] buf = new byte[1024];
-
-            int bytesRead;
-            while ((bytesRead = is.read(buf)) > 0) {
-                os.write(buf, 0, bytesRead);
-            }
-        } catch (IOException e) {
-            System.out.println("Didn't work");
-        }
-    }
-
     public static void conflict(String filename, Tree.Branch b, Tree.Node currNode) {
         if (!isConflicted) {
-            isConflicted = !isConflicted;
+            isConflicted = true;
             System.out.println("Encountered a merge conflict.");
         }
         File file = new File(filename);
@@ -663,7 +689,7 @@ public class GitletEngine implements Serializable {
         }
         int index = currNode.fileNames.indexOf(filename);
         String fileId = currNode.hashed.get(index);
-        File thisFile = Utils.join(GITDIR, "committed", fileId);
+        File thisFile = new File(committedDirctory, fileId);
         byte[] contents = Utils.readContents(thisFile);
         if (currNode.fileNames.contains(filename)) {
             ret = ret + new String(contents);
@@ -672,8 +698,8 @@ public class GitletEngine implements Serializable {
         Tree.Node bNode = b.node;
         int bIndex = bNode.fileNames.indexOf(filename);
         String bFileId = bNode.hashed.get(bIndex);
-        File bFile = Utils.join(GITDIR, "committed", bFileId);
-        byte[] bContents = Utils.readContents(thisFile);
+        File bFile = new File(committedDirctory, bFileId);
+        byte[] bContents = Utils.readContents(bFile);
         if (bNode.fileNames.contains(filename)) {
             ret = ret + new String(bContents);
         }
@@ -684,28 +710,28 @@ public class GitletEngine implements Serializable {
     public static void split2curr(Tree.Node split, Tree.Node currNode,
                                   Tree.Node newNode, Tree.Branch newBranch) {
         for (String name : split.fileNames) {
-            int index = currNode.fileNames.indexOf(name);
-            int index2 = split.fileNames.indexOf(name);
-            int index3 = newNode.fileNames.indexOf(name);
+            int indexCurr = currNode.fileNames.indexOf(name);
+            int indexSplit = split.fileNames.indexOf(name);
+            int indexNew = newNode.fileNames.indexOf(name);
             if (currNode.fileNames.contains(name)) {
-                if (split.hashed.get(index2).equals(currNode.hashed.get(index))) {
+                if (split.hashed.get(indexSplit).equals(currNode.hashed.get(indexCurr))) {
                     if (!newNode.fileNames.contains(name)) {
                         rm(name);
-                    } else if (split.hashed.get(index2)
-                            .equals(newNode.hashed.get(index3))) {
-                        writefile(name, newNode);
+                    } else if (!split.hashed.get(indexSplit)
+                            .equals(newNode.hashed.get(indexNew))) {
+                        writeCommitted2Working(name, newNode);
                         add(name);
                     }
                 } else {
                     if (newNode.fileNames.contains(name)
-                            && newNode.hashed.get(index3).equals(split.hashed.get(index2))) {
+                            && newNode.hashed.get(indexNew).equals(split.hashed.get(indexSplit))) {
                         continue;
                     }
                     conflict(name, newBranch, currNode);
                 }
             } else {
                 if (newNode.fileNames.contains(name)
-                        && newNode.hashed.get(index3).equals(split.hashed.get(index2))) {
+                        && newNode.hashed.get(indexNew).equals(split.hashed.get(indexSplit))) {
                     continue;
                 }
                 conflict(name, newBranch, currNode);
@@ -737,13 +763,7 @@ public class GitletEngine implements Serializable {
         for (String name : newNode.fileNames) {
             if (!split.fileNames.contains(name)) {
                 if (!currNode.fileNames.contains(name)) {
-                    File file = new File(name);
-
-                    int index = newNode.fileNames.indexOf(name);
-                    String fileId = newNode.hashed.get(index);
-                    File thisFile = Utils.join(GITDIR, "committed", fileId);
-                    byte[] contents = Utils.readContents(thisFile);
-                    Utils.writeContents(file, contents);
+                    writeCommitted2Working(name, newNode);
                     add(name);
                 }
             }
