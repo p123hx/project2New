@@ -94,14 +94,14 @@ public class GitletEngine implements Serializable {
     }
 
     public static void add(String file) {
-        File thefile = new File(file);
-        if (!thefile.exists()) {
-            System.out.println("File does not exist.");
-            return;
-        }
+        //fixme
         Tree metadata = loadTree();
         Tree.Node currNode = metadata.currBranch.headNode;
         File fileWorking = new File(file);
+        if (!fileWorking.exists()) {
+            System.out.println("File does not exist.");
+            return;
+        }
         String fileID = Utils.sha1(Utils.readContents(fileWorking), fileWorking.getName());
         File fileStaged = Utils.join(stagedDirctory, file);
         File fileUntracking = Utils.join(untrackingDirctory, file);
@@ -142,6 +142,9 @@ public class GitletEngine implements Serializable {
                 realNames.add(string);
                 File fileStaged = Utils.join(stagedDirctory, string);
                 String fileID = Utils.sha1(Utils.readContents(fileStaged), fileStaged.getName());
+                File fileCommitted = Utils.join(committedDirctory, fileID);
+                creatFile(fileCommitted);
+                writeFIle2File(fileStaged, fileCommitted);
                 hashedNames.add(fileID);
             }
             metadata.add(message, hashedNames, realNames);
@@ -166,25 +169,17 @@ public class GitletEngine implements Serializable {
         deleteDr(untrackingDirctory);
         deleteDr(stagedDirctory);
     }
-    public static void rmHelper(String filename) {
-        File absNew = Utils.join(untrackingDirctory, filename);
-        try {
-            if (!absNew.exists()) {
-                absNew.createNewFile();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public static void rm(String filename) {
         Tree metadata = loadTree();
         List<String> staging = Utils.plainFilenamesIn(stagedDirctory);
         ArrayList tracked = metadata.currBranch.headNode.fileNames;
+        //fixme
         File toDelete = new File(filename);
         File toDeleteStage = Utils.join(stagedDirctory, filename);
+        File fileUntracked = Utils.join(untrackingDirctory, filename);
         if (tracked.contains(filename)) {
-            rmHelper(filename);
+            creatFile(fileUntracked);
             if (toDelete.exists()) {
                 toDelete.delete();
             }
@@ -233,7 +228,6 @@ public class GitletEngine implements Serializable {
 
     public static void status() {
         Tree metadata = loadTree();
-        File dir = new File(System.getProperty("user.dir"));
         System.out.println("=== Branches ===");
         System.out.println("*" + metadata.currBranch.name);
         ArrayList<String> branchNames = new ArrayList<>();
@@ -309,6 +303,7 @@ public class GitletEngine implements Serializable {
         Tree.Node currNode = metadata.currBranch.headNode;
         if (commitId.length() == 6) {
             for (Tree.Node node : allNodes) {
+                //fixme
                 if (node.shaId.startsWith(commitId)) {
                     newNode = node;
                     break;
@@ -322,6 +317,7 @@ public class GitletEngine implements Serializable {
                 }
             }
         }
+
         if (newNode == null) {
             System.out.println("No commit with that id exists.");
             return;
@@ -368,16 +364,14 @@ public class GitletEngine implements Serializable {
     public static void checkoutBranch(String branchName) {
         Tree metadata = loadTree();
         Tree.Node currNode = metadata.currBranch.headNode;
-        boolean flag = false;
         Tree.Branch newBranch = null;
         for (Tree.Branch branch : metadata.branches) {
             if (branch.name.equals(branchName)) {
-                flag = true;
                 newBranch = branch;
                 break;
             }
         }
-        if (!flag) {
+        if (newBranch == null) {
             System.out.println("No such branch exists.");
             return;
         } else if (metadata.currBranch.name.equals(branchName)) {
@@ -395,10 +389,8 @@ public class GitletEngine implements Serializable {
             }
         }
         int len = node.fileNames.size();
-        for (int i = 0; i < len; i += 1) {
-            String fileID = node.hashed.get(i);
-            File file = Utils.join(GITDIR, committedDirctory + fileID);
-            Utils.writeContents(new File(node.fileNames.get(i)), Utils.readContents(file));
+        for (String filename : node.fileNames) {
+            writeCommitted2Working(filename, node);
         }
         metadata.currBranch = newBranch;
         clearStageUntracking();
@@ -407,14 +399,11 @@ public class GitletEngine implements Serializable {
 
     public static void checkoutFile(String fileName) {
         Tree.Node curr = loadTree().currBranch.headNode;
-        int index = curr.fileNames.indexOf(fileName);
-        String fileID = curr.hashed.get(index);
-        File file = Utils.join(committedDirctory, fileID);
-        if (!file.exists()) {
+        if (!curr.fileNames.contains(fileName)) {
             System.out.println("File does not exist in that commit.");
             return;
         }
-        Utils.writeContents(new File(fileName), Utils.readContents(file));
+        writeCommitted2Working(fileName, curr);
     }
 
     public static void checkoutCommitFile(String commitId, String fileName) {

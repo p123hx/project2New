@@ -1,6 +1,5 @@
 package gitlet;
 
-import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,9 +91,6 @@ public class Main implements Serializable {
         if (!GitletEngine.checkInit()) {
             System.out.println(("Not in an initialized gitlet directory."));
             return;
-        }
-        if (args[1].equals("")) {
-            System.out.println("Please enter a commit message.");
         }
         GitletEngine.commit(args[1]);
         return;
