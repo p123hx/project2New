@@ -158,6 +158,10 @@ public class GitletEngine implements Serializable {
             System.out.println("No changes added to the commit.");
             return;
         }
+        if (message.equals("")) {
+            System.out.println("Please enter a commit message.");
+            return;
+        }
 
         Tree metadata = loadTree();
         File[] stagedFiles = staged.listFiles();
@@ -383,67 +387,19 @@ public class GitletEngine implements Serializable {
         }
         metadata.makeBranch(branchName);
         writeObjectToFile(metadata);
-        /*
-        for (Tree.Branch branch : metadata.branches) {
-            if (branch.name.equals(branchName)) {
-                System.out.println("A branch with that name already exists.");
-                return;
-            } else {
-                metadata.makeBranch(branchName);
-                writeObjectToFile(metadata);
-            }
-        }
-         */
-    }
-
-    public static int findHelper(
-            Tree.Node commit,
-            ArrayList<Tree.Node> used, String message) {
-        if (commit.parents == null || commit.parents.isEmpty()) {
-/*
-            if (!(used.contains(message)) &&
-                    commit.logMessage.equals(message)) {
-                return 1;
-            }
- */
-            return 0;
-        }
-        int tmp = 0;
-        for (Tree.Node parent : commit.parents) {
-            if (!(used.contains(parent))) {
-                //System.out.println("===");
-                if (parent.logMessage.equals(message)) {
-                    System.out.println(parent.shaId);
-                    tmp += 1;
-                }
-                tmp += findHelper(parent, used, message);
-            }
-        }
-        return tmp;
     }
 
     public static void find(String message) {
-        int num = 0;
-        ArrayList<Tree.Node> used = new ArrayList<Tree.Node>();
+        int count = 0;
         Tree metadata = loadTree();
-        Tree.Node p = metadata.head.branch.node;
-        while (p.child != null) {
-            if (p.logMessage.equals(message)) {
-                System.out.println(p.shaId);
-                num += 1;
+        for (Tree.Node node : metadata.allNodes) {
+            if (node.logMessage.equals(message)) {
+                System.out.println(node.shaId);
+                count += 1;
             }
-            used.add(p);
-            p = p.child;
         }
-        if (p.logMessage.equals(message)) {
-            System.out.println(p.shaId);
-            num += 1;
-            //System.out.println();
-        }
-        num += findHelper(p, used, message);
-        if (num == 0) {
+        if (count == 0) {
             System.out.println("Found no commit with that message.");
-            return;
         }
     }
 
