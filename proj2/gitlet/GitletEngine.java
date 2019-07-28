@@ -14,9 +14,9 @@ import java.util.Collections;
 public class GitletEngine implements Serializable {
     private static boolean isConflicted = false;
     public static final File GITDIR = new File(".gitlet/");
-    public static File committedDirctory = new File(GITDIR, "committed");
-    public static File stagedDirctory = new File(GITDIR, "staged");
-    public static File untrackingDirctory = new File(GITDIR, "untracking");
+    public static File committedDirctory = new File(GITDIR, "committed/");
+    public static File stagedDirctory = new File(GITDIR, "staged/");
+    public static File untrackingDirctory = new File(GITDIR, "untracking/");
 
     public static boolean checkInit() {
         return GITDIR.exists() && GITDIR.isDirectory();
